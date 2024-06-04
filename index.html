@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin: 10px 0 5px;
+        }
+        input {
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .button-group button {
+            flex: 1;
+            margin: 0 5px;
+        }
+        #registerSection, #loginSection, #userSection {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>FastAPI Test</h1>
+
+        <div class="button-group">
+            <button onclick="showRegister()">Register</button>
+            <button onclick="showLogin()">Login</button>
+        </div>
+
+        <div id="registerSection">
+            <h2>Register</h2>
+            <form id="registerForm">
+                <label for="username">Username:</label>
+                <input type="text" id="registerUsername" name="username" required>
+                <label for="email">Email:</label>
+                <input type="email" id="registerEmail" name="email" required>
+                <label for="full_name">Full Name:</label>
+                <input type="text" id="registerFullName" name="full_name" required>
+                <label for="password">Password:</label>
+                <input type="password" id="registerPassword" name="password" required>
+                <button type="button" onclick="register()">Register</button>
+            </form>
+        </div>
+
+        <div id="loginSection">
+            <h2>Login</h2>
+            <form id="loginForm">
+                <label for="username">Username:</label>
+                <input type="text" id="loginUsername" name="username" required>
+                <label for="password">Password:</label>
+                <input type="password" id="loginPassword" name="password" required>
+                <button type="button" onclick="login()">Login</button>
+            </form>
+        </div>
+
+        <div id="userSection">
+            <h2>User Actions</h2>
+            <button type="button" onclick="logout()">Logout</button>
+            <button type="button" onclick="deleteAccount()">Delete Account</button>
+        </div>
+    </div>
+
+    <script>
+        let accessToken = '';
+
+        function showRegister() {
+            document.getElementById('registerSection').style.display = 'block';
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('userSection').style.display = 'none';
+        }
+
+        function showLogin() {
+            document.getElementById('registerSection').style.display = 'none';
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('userSection').style.display = 'none';
+        }
+
+        async function register() {
+            const username = document.getElementById('registerUsername').value;
+            const email = document.getElementById('registerEmail').value;
+            const fullName = document.getElementById('registerFullName').value;
+            const password = document.getElementById('registerPassword').value;
+
+            if (!email.includes('@')) {
+                alert('Email must include @');
+                return;
+            }
+
+            const response = await fetch('http://127.0.0.1:8001/register/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, email, full_name: fullName, password })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert('Successfully registered.');
+                showLogin();
+            } else {
+                alert('Register failed: ' + result.detail);
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const response = await fetch('http://127.0.0.1:8001/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `username=${username}&password=${password}`
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                accessToken = result.access_token;
+                alert('User logged in');
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('userSection').style.display = 'block';
+            } else {
+                alert('Login failed: ' + result.detail);
+            }
+        }
+
+        async function logout() {
+            const response = await fetch('http://127.0.0.1:8001/logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                accessToken = '';
+                alert('User logged out');
+                document.getElementById('userSection').style.display = 'none';
+                showLogin();
+            } else {
+                alert('Logout failed: ' + result.detail);
+            }
+        }
+
+        async function deleteAccount() {
+            const response = await fetch('http://127.0.0.1:8001/users/me', {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                accessToken = '';
+                alert('User account deleted');
+                document.getElementById('userSection').style.display = 'none';
+                showRegister();
+            } else {
+                alert('Delete account failed: ' + result.detail);
+            }
+        }
+    </script>
+</body>
+</html>
